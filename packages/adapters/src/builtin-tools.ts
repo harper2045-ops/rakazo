@@ -219,7 +219,8 @@ export const builtinAgentTools: ConnectorTool[] = [
         message: {
           type: "string",
           maxLength: 500,
-          description: "Short user-visible update, not the final answer \u2014 longer text is silently truncated.",
+          description:
+            "Short user-visible update, not the final answer \u2014 longer text is silently truncated.",
         },
       },
       required: ["message"],
@@ -724,6 +725,12 @@ export const builtinAgentTools: ConnectorTool[] = [
           type: "string",
           description: "Optional first task to run in the new bot's thread.",
         },
+        computer_mode: {
+          type: "string",
+          enum: ["team", "dedicated"],
+          description:
+            "Optional. team shares one screen with other Team bots; dedicated (Private) gets its own. Defaults to team.",
+        },
       },
       required: ["name"],
     },
@@ -748,7 +755,7 @@ export const builtinAgentTools: ConnectorTool[] = [
   {
     name: "message_bot",
     description:
-      "Send a useful update, question, or result to another of the user's bots. You must call this tool to actually deliver it — writing the message in your own reply text (e.g. \"[to Comms] ...\") does not send anything and the recipient never sees it. Delivery is async and does not end your turn. Continue independent work; do not poll or send ack-only messages. Later updates only if they add something new.",
+      'Send a useful update, question, or result to another of the user\'s bots. You must call this tool to actually deliver it — writing the message in your own reply text (e.g. "[to Comms] ...") does not send anything and the recipient never sees it. Delivery is async and does not end your turn. Continue independent work; do not poll or send ack-only messages. Later updates only if they add something new.',
     inputSchema: {
       type: "object",
       properties: {
