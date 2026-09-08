@@ -60,19 +60,28 @@ describe("thread event reduction", () => {
     );
   });
 
-  it("applies a persisted thumbs-up event to its message", () => {
+  it("appends an emoji reply with its exact target", () => {
     const initial = snapshot([message("message-1", [{ kind: "text", text: "Done" }], 1)]);
 
     const next = reduceThreadSnapshot(
       initial,
       event({
-        type: "thread.message.reaction",
+        type: "thread.message.created",
         seq: 4,
-        payload: { messageId: "message-1", thumbsUp: true },
+        payload: {
+          messageId: "reaction-1",
+          role: "user",
+          blocks: [{ kind: "text", text: "❤️" }],
+          replyToMessageId: "message-1",
+        },
       }),
     );
 
-    expect(next?.messages[0]?.thumbsUp).toBe(true);
+    expect(next?.messages.find((message) => message.id === "reaction-1")).toMatchObject({
+      role: "user",
+      blocks: [{ kind: "text", text: "❤️" }],
+      replyToMessageId: "message-1",
+    });
     expect(next?.cursor).toBe(4);
   });
 
@@ -309,6 +318,7 @@ describe("thread event reduction", () => {
     expect(isThreadSnapshotEvent(event({ type: "run.started" }))).toBe(true);
     expect(isThreadSnapshotEvent(event({ type: "run.completed" }))).toBe(true);
     expect(isThreadSnapshotEvent(event({ type: "computer.takeover.requested" }))).toBe(true);
+    expect(isThreadSnapshotEvent(event({ type: "agent.tool.completed" }))).toBe(true);
   });
 
   it("event-sources the active run on run.started so Stop does not wait on threads.get", () => {
@@ -850,6 +860,31 @@ describe("thread event reduction", () => {
         ],
       }),
     ]);
+  });
+
+  it("advances past tool completion audit events without adding a visible message", () => {
+    const initial = snapshot(
+      [
+        message(
+          "progress:run-1",
+          [{ kind: "steps", steps: [{ label: "Slack find channels", count: 1 }] }],
+          4,
+        ),
+      ],
+      4,
+    );
+    const next = reduceThreadSnapshot(
+      initial,
+      event({
+        type: "agent.tool.completed",
+        seq: 5,
+        runId: "run-1",
+        payload: { name: "SLACK_FIND_CHANNELS", outcome: "succeeded" },
+      }),
+    );
+
+    expect(next?.cursor).toBe(5);
+    expect(next?.messages).toEqual(initial.messages);
   });
 
   it("holds a tool call that lands mid-sentence until the sentence completes", () => {
@@ -1474,7 +1509,7 @@ function computer(overrides: Partial<ComputerStatus> = {}): ComputerStatus {
     screenHeight: 800,
     homeRevision: null,
     busyBotName: null,
-    updateAvailable: true,
+    canUpdate: true,
     ...overrides,
   };
 }

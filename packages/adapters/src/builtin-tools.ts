@@ -690,6 +690,14 @@ export const builtinAgentTools: ConnectorTool[] = [
           type: "string",
           description: "Optional extra system instructions for the helper.",
         },
+        model_provider: {
+          type: "string",
+          description: "Optional connected model provider. Set together with model_id.",
+        },
+        model_id: {
+          type: "string",
+          description: "Optional connected model ID. Set together with model_provider.",
+        },
       },
       required: ["name", "task"],
     },
@@ -733,6 +741,28 @@ export const builtinAgentTools: ConnectorTool[] = [
         },
       },
       required: ["name"],
+    },
+  },
+  {
+    name: "update_bot",
+    description:
+      "Update this bot's own profile fields that the user sees in chat: name (header and list label), title (short role line), and description. Call this when the user asks you to rename yourself or change your title/description. Do not claim you updated the profile without calling this tool.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Display name shown in the chat header and bot list.",
+        },
+        title: {
+          type: "string",
+          description: "Short role or headline shown in bot settings.",
+        },
+        description: {
+          type: "string",
+          description: "Longer blurb describing what this bot does.",
+        },
+      },
     },
   },
   {

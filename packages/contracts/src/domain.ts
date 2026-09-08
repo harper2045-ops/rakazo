@@ -68,6 +68,8 @@ export const BotSchema = z.object({
   teamChatAmbientEnabled: z.boolean(),
   teamChatRules: z.string(),
   webhookConfigured: z.boolean(),
+  /** Present when created with an idempotency key (e.g. onboarding:first). */
+  spawnKey: z.string().nullable(),
 });
 export type Bot = z.infer<typeof BotSchema>;
 
@@ -245,6 +247,10 @@ export const SpaceSchema = z.object({
   id: Id,
   name: z.string(),
   isDefault: z.boolean(),
+  /** True when the space has any bot or group, including archived. */
+  hasContent: z.boolean(),
+  /** True only when the current member may delete this non-default space. */
+  canDelete: z.boolean().optional(),
   bots: z.array(SpaceBotSchema),
   groups: z.array(SpaceGroupSchema),
   externalConversations: z.array(ExternalConversationSchema),
@@ -278,6 +284,8 @@ export const CreateBotInput = z.object({
   notifyOnFinish: z.boolean().default(true),
   color: z.string().optional(),
   computerMode: ComputerModeSchema.default("team"),
+  /** Idempotency key within a space (unique with spaceId). */
+  spawnKey: z.string().trim().min(1).max(120).optional(),
 });
 export type CreateBotInput = z.infer<typeof CreateBotInput>;
 
@@ -721,6 +729,25 @@ export const UsageRecordSchema = z.object({
   createdAt: z.string(),
 });
 
+export const COMPUTER_UPDATE_STAGES = [
+  "preparing",
+  "saving",
+  "recreating",
+  "restoring",
+  "reconnecting",
+] as const;
+export const ComputerUpdateSchema = z.object({
+  canReleaseReservation: z.boolean().optional(),
+  action: z.enum(["update", "recover"]),
+  id: Id,
+  botId: Id,
+  name: z.string(),
+  mode: ComputerModeSchema,
+  status: z.enum(["queued", "running", "interrupted", "completed", "failed"]),
+  stage: z.enum(COMPUTER_UPDATE_STAGES),
+});
+export type ComputerUpdate = z.infer<typeof ComputerUpdateSchema>;
+
 export const ComputerStatusSchema = z.object({
   botId: Id,
   mode: ComputerModeSchema,
@@ -734,7 +761,7 @@ export const ComputerStatusSchema = z.object({
   screenHeight: z.number().int().positive(),
   homeRevision: z.string().nullable(),
   busyBotName: z.string().nullable(),
-  updateAvailable: z.boolean(),
+  canUpdate: z.boolean(),
 });
 export type ComputerStatus = z.infer<typeof ComputerStatusSchema>;
 
