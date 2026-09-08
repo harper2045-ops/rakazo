@@ -23,7 +23,7 @@ jobs:
        github.event.workflow_run.conclusion == 'timed_out') &&
       (github.event.workflow_run.event == 'pull_request' ||
        (github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_branch == 'main'))
+        github.event.workflow_run.head_branch == 'main')) && secrets.S3_ACCESS_KEY_ID != "" && vars.S3_BUCKET != ""
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
