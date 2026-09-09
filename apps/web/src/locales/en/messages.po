@@ -141,9 +141,9 @@ msgstr "{workingBotName} is working"
 msgid "@{0}"
 msgstr "@{0}"
 
-#: src/pages/shell/dialogs.tsx:140
-msgid "A separate, private workspace with its own bots and groups. Use spaces to keep contexts apart, such as work and personal."
-msgstr "A separate, private workspace with its own bots and groups. Use spaces to keep contexts apart, such as work and personal."
+#: src/pages/shell/dialogs.tsx:137
+msgid "Private workspace with its own bots and groups."
+msgstr "Private workspace with its own bots and groups."
 
 #: src/pages/shell/bot-picker.tsx:105
 #: src/pages/shell/bot-picker.tsx:106
@@ -529,6 +529,10 @@ msgstr "Authorization timed out. Please try again."
 msgid "Authorize"
 msgstr "Authorize"
 
+#: src/pages/shell/message-cards.tsx:350
+msgid "Authorize this server so agents can use its tools. A popup opens."
+msgstr "Authorize this server so agents can use its tools. A popup opens."
+
 #: src/pages/ExternalConversationSettings.tsx:160
 msgid "Automated senders"
 msgstr "Automated senders"
@@ -624,7 +628,7 @@ msgstr "Can't reach the server."
 #: src/components/AskCard.tsx:35
 #: src/components/AskCard.tsx:186
 #: src/components/ComputerMaintenanceActions.tsx:97
-#: src/components/ComputerUpdateProgress.tsx:236
+#: src/components/ComputerUpdateProgress.tsx:233
 #: src/components/teach/TeachComputerOverlay.tsx:254
 #: src/pages/KnowledgeSection.tsx:212
 #: src/pages/KnowledgeSection.tsx:437
@@ -2080,6 +2084,10 @@ msgstr "Log out"
 msgid "Low"
 msgstr "Low"
 
+#: src/components/ComputerUpdateProgress.tsx:228
+msgid "Make sure nothing is still running on this computer."
+msgstr "Make sure nothing is still running on this computer."
+
 #: src/pages/PluginsOverlay.tsx:1162
 msgid "Manage MCP servers"
 msgstr "Manage MCP servers"
@@ -2464,6 +2472,10 @@ msgstr "Not in the plugin catalog"
 msgid "Not now"
 msgstr "Not now"
 
+#: src/components/ComputerUpdateProgress.tsx:251
+msgid "Nothing is still running"
+msgstr "Nothing is still running"
+
 #: src/pages/KnowledgeSection.tsx:163
 msgid "Nothing remembered yet"
 msgstr "Nothing remembered yet"
@@ -2503,8 +2515,8 @@ msgid "on the 1st at {0}"
 msgstr "on the 1st at {0}"
 
 #: src/pages/shell/dialogs.tsx:135
-msgid "One conversation with 2–6 of your bots in a shared thread. Name the group, pick its members, and they all reply in the same chat."
-msgstr "One conversation with 2–6 of your bots in a shared thread. Name the group, pick its members, and they all reply in the same chat."
+msgid "Shared chat with 2-6 bots. They all reply in the same thread."
+msgstr "Shared chat with 2-6 bots. They all reply in the same thread."
 
 #: src/pages/Shell.tsx:3681
 msgid "Only empty spaces can be deleted. Delete its bots and groups first."
@@ -2675,8 +2687,8 @@ msgid "Queued"
 msgstr "Queued"
 
 #: src/pages/PluginsOverlay.tsx:1075
-msgid "Rakazo verifies the source before saving it. Credentials are encrypted and are never returned to clients or exposed to the model."
-msgstr "Rakazo verifies the source before saving it. Credentials are encrypted and are never returned to clients or exposed to the model."
+msgid "Credentials are encrypted and never sent to the model."
+msgstr "Credentials are encrypted and never sent to the model."
 
 #: src/pages/shell/bot-panel.tsx:478
 msgid "Read replies aloud"
@@ -3306,10 +3318,6 @@ msgstr "Steps"
 msgid "Stop"
 msgstr "Stop"
 
-#: src/components/ComputerUpdateProgress.tsx:228
-msgid "Stop all workers and confirm that provider operations have stopped before releasing this computer."
-msgstr "Stop all workers and confirm that provider operations have stopped before releasing this computer."
-
 #: src/pages/Shell.tsx:5288
 #: src/pages/Shell.tsx:5539
 msgid "Stop speaking"
@@ -3458,10 +3466,6 @@ msgstr "This server did not request browser authorization."
 #: src/pages/McpServersOverlay.tsx:185
 msgid "This server is already connected. Disconnect it first to authorize again."
 msgstr "This server is already connected. Disconnect it first to authorize again."
-
-#: src/pages/shell/message-cards.tsx:350
-msgid "This server uses browser sign-in. Authorize it to let your agents use its tools. A popup will open."
-msgstr "This server uses browser sign-in. Authorize it to let your agents use its tools. A popup will open."
 
 #: src/pages/ModelSettingsOverlay.tsx:709
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
@@ -3684,10 +3688,6 @@ msgstr "When to use"
 #: src/pages/HostComputerPrompt.tsx:59
 msgid "Where should bots run?"
 msgstr "Where should bots run?"
-
-#: src/components/ComputerUpdateProgress.tsx:254
-msgid "Workers and operations are stopped"
-msgstr "Workers and operations are stopped"
 
 #: src/pages/Auth.tsx:209
 #: src/pages/Auth.tsx:317
