@@ -83,7 +83,10 @@ function main() {
 
     if (process.env.GITHUB_OUTPUT) {
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `missing-tests-count=${missing.length}\n`);
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, `missing-tests-files=${JSON.stringify(missing)}\n`);
+      fs.appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `missing-tests-files=${JSON.stringify(missing)}\n`,
+      );
     }
 
     console.log(`::notice title=Missing Tests::${missing.length} source files lack tests.`);
