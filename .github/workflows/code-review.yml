@@ -1,0 +1,200 @@
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: code-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git diff
+
+      - name: Make scripts executable
+        run: chmod +x .github/scripts/*.js
+
+      - name: Install jq for JSON processing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Biome security rules
+        id: biome-security
+        run: |
+          echo "Running Biome security rules..."
+          OUTPUT=$(npx @biomejs/biome lint . --only=security --reporter=json --no-errors-on-unmatched 2>&1 || true)
+          
+          # Parse JSON output to count diagnostics
+          DIAGNOSTICS_COUNT=0
+          if echo "$OUTPUT" | jq -e '.diagnostics' > /dev/null 2>&1; then
+            DIAGNOSTICS_COUNT=$(echo "$OUTPUT" | jq '.diagnostics | length')
+          fi
+          
+          if [ "$DIAGNOSTICS_COUNT" -gt 0 ]; then
+            echo "Security findings found: $DIAGNOSTICS_COUNT"
+            echo "security_findings=true" >> $GITHUB_OUTPUT
+            echo "security_report<<EOF" >> $GITHUB_OUTPUT
+            echo "$OUTPUT" | jq -c '.' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "No security issues found"
+            echo "security_findings=false" >> $GITHUB_OUTPUT
+            echo "security_report=No security issues found" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Biome complexity rules
+        id: biome-complexity
+        run: |
+          echo "Running Biome complexity rules..."
+          OUTPUT=$(npx @biomejs/biome lint . --only=complexity --reporter=json --no-errors-on-unmatched 2>&1 || true)
+          
+          # Parse JSON output to count diagnostics
+          DIAGNOSTICS_COUNT=0
+          if echo "$OUTPUT" | jq -e '.diagnostics' > /dev/null 2>&1; then
+            DIAGNOSTICS_COUNT=$(echo "$OUTPUT" | jq '.diagnostics | length')
+          fi
+          
+          if [ "$DIAGNOSTICS_COUNT" -gt 0 ]; then
+            echo "Complexity findings found: $DIAGNOSTICS_COUNT"
+            echo "complexity_findings=true" >> $GITHUB_OUTPUT
+            echo "complexity_report<<EOF" >> $GITHUB_OUTPUT
+            echo "$OUTPUT" | jq -c '.' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "No complexity issues found"
+            echo "complexity_findings=false" >> $GITHUB_OUTPUT
+            echo "complexity_report=No complexity issues found" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect missing tests
+        id: missing-tests
+        run: |
+          echo "Checking for missing tests..."
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          node .github/scripts/missing-tests.js "$BASE_SHA" "$HEAD_SHA" 2>&1 | tee missing-tests-report.txt
+          
+          MISSING_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $MISSING_EXIT_CODE -eq 0 ]; then
+            echo "Missing tests check completed"
+          else
+            echo "Missing tests script exited with code $MISSING_EXIT_CODE"
+          fi
+
+      - name: Aggregate findings and post PR comment
+        uses: actions/github-script@v7
+        env:
+          SECURITY_FINDINGS: ${{ steps.biome-security.outputs.security_findings }}
+          SECURITY_REPORT: ${{ steps.biome-security.outputs.security_report }}
+          COMPLEXITY_FINDINGS: ${{ steps.biome-complexity.outputs.complexity_findings }}
+          COMPLEXITY_REPORT: ${{ steps.biome-complexity.outputs.complexity_report }}
+          MISSING_TESTS_COUNT: ${{ steps.missing-tests.outputs.missing-tests-count || 0 }}
+          MISSING_TESTS_FILES: ${{ steps.missing-tests.outputs.missing-tests-files || '[]' }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            
+            const findings = [];
+            
+            if (process.env.SECURITY_FINDINGS === 'true') {
+              let securityData;
+              try {
+                securityData = JSON.parse(process.env.SECURITY_REPORT);
+              } catch {
+                securityData = { diagnostics: [] };
+              }
+              
+              if (securityData.diagnostics && securityData.diagnostics.length > 0) {
+                const securityMessages = securityData.diagnostics.map(d => {
+                  const location = d.location ? ` at ${d.location.path}:${d.location.start?.line}:${d.location.start?.column}` : '';
+                  return `- ${d.message}${location} [${d.category || 'security'}]`;
+                }).join('\n');
+                findings.push(`## 🔒 Security Issues\n${securityMessages}`);
+              }
+            }
+            
+            if (process.env.COMPLEXITY_FINDINGS === 'true') {
+              let complexityData;
+              try {
+                complexityData = JSON.parse(process.env.COMPLEXITY_REPORT);
+              } catch {
+                complexityData = { diagnostics: [] };
+              }
+              
+              if (complexityData.diagnostics && complexityData.diagnostics.length > 0) {
+                const complexityMessages = complexityData.diagnostics.map(d => {
+                  const location = d.location ? ` at ${d.location.path}:${d.location.start?.line}:${d.location.start?.column}` : '';
+                  return `- ${d.message}${location} [${d.category || 'complexity'}]`;
+                }).join('\n');
+                findings.push(`## 📊 Complexity Issues\n${complexityMessages}`);
+              }
+            }
+            
+            const missingCount = parseInt(process.env.MISSING_TESTS_COUNT);
+            if (missingCount > 0) {
+              let missingFiles;
+              try {
+                missingFiles = JSON.parse(process.env.MISSING_TESTS_FILES);
+              } catch {
+                missingFiles = [];
+              }
+              findings.push(`## 🧪 Missing Tests\nThe following changed files lack corresponding tests:\n${missingFiles.map(f => `- \`${f}\``).join('\n')}`);
+            }
+            
+            if (findings.length > 0) {
+              const commentBody = `## Automated Code Review Results\n\n${findings.join('\n\n')}\n\n*This review is automated. Critical/high issues should be addressed.*`;
+              
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: commentBody,
+              });
+              
+              const labels = [];
+              if (process.env.SECURITY_FINDINGS === 'true') {
+                labels.push('security-review');
+              }
+              if (missingCount > 0) {
+                labels.push('needs-tests');
+              }
+              
+              if (labels.length > 0) {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number,
+                  labels: labels,
+                });
+              }
+            } else {
+              console.log('No review findings to report.');
+            }
+            
+            return 'Review completed';
