@@ -44,29 +44,33 @@ jobs:
 
       - name: Upload SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: success() && steps.trivy-scan.outcome == 'success'        
+        if: success() && steps.trivy-scan.outcome == 'success'
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Parse Trivy output for alerts
         id: parse
         run: |
-          # Capture raw text output from trivy stdout
-          TRIVY_OUTPUT=$(trivy fs --scanners vuln --severity HIGH,CRITICAL --format json . 2>/dev/null || true)
-          echo "trivy_output<<EOF" >> $GITHUB_OUTPUT
-          echo "$TRIVY_OUTPUT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Write raw JSON to a file rather than into GITHUB_OUTPUT/an
+          # interpolated expression - large scan results blow past the
+          # OS argument/environment size limit when inlined into a command.
+          trivy fs --scanners vuln --severity HIGH,CRITICAL --format json . > trivy-output.json 2>/dev/null || echo '{}' > trivy-output.json
+          if [ -s trivy-output.json ] && [ "$(cat trivy-output.json)" != "null" ]; then
+            echo "has_findings=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_findings=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create comment on Pull Request
-        if: github.event_name == 'pull_request' && steps.parse.outputs.trivy_output != 'null' && steps.parse.outputs.trivy_output != ''
+        if: github.event_name == 'pull_request' && steps.parse.outputs.has_findings == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `${{ steps.parse.outputs.trivy_output }}`;
+            const fs = require('fs');
             let vulns = [];
             try {
-              const data = JSON.parse(output);
-              vulns = data.Results?.flatMap(r => 
+              const data = JSON.parse(fs.readFileSync('trivy-output.json', 'utf8'));
+              vulns = data.Results?.flatMap(r =>
                 r.Vulnerabilities?.map(v => ({
                   pkg: r.Target || 'unknown',
                   id: v.VulnerabilityID,
@@ -102,15 +106,15 @@ jobs:
             });
 
       - name: Create GitHub Issue for scheduled scan
-        if: github.event_name == 'schedule' && steps.parse.outputs.trivy_output != 'null' && steps.parse.outputs.trivy_output != ''
+        if: github.event_name == 'schedule' && steps.parse.outputs.has_findings == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `${{ steps.parse.outputs.trivy_output }}`;
+            const fs = require('fs');
             let vulns = [];
             try {
-              const data = JSON.parse(output);
-              vulns = data.Results?.flatMap(r => 
+              const data = JSON.parse(fs.readFileSync('trivy-output.json', 'utf8'));
+              vulns = data.Results?.flatMap(r =>
                 r.Vulnerabilities?.map(v => ({
                   pkg: r.Target || 'unknown',
                   id: v.VulnerabilityID,
